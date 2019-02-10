@@ -1,0 +1,22 @@
+{
+  "name": "com.dragos.filetransfer",
+  "version": "1.0.0",
+  "description": "Web app to upload and share files",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Dragos Raducanu",
+  "license": "ISC",
+  "dependencies": {
+    "aws": "0.0.3-2",
+    "aws-sdk": "^2.400.0",
+    "body-parser": "^1.18.3",
+    "create-react-app": "^2.1.3",
+    "ejs": "^2.6.1",
+    "express": "^4.16.4",
+    "multer": "^1.4.1",
+    "multer-s3": "^2.9.0",
+    "reactstrap": "^7.1.0"
+  }
+}
