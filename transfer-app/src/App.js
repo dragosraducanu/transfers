@@ -129,6 +129,8 @@ class App extends Component {
         if (this.state.formData.selectedFile !== undefined) {
             const data = new FormData();
             data.append('file', this.state.formData.selectedFile);
+            data.append('from', this.state.formData.from);
+            data.append('description', this.state.formData.description);
 
             axios.request({
                 method: "post",
@@ -140,8 +142,9 @@ class App extends Component {
                     })
                 }
             }).then(data => {
+                console.log(data.data);
                 this.setState({
-                    downloadLink: data.data.link
+                    downloadLink: window.location.href + "transfers/" + data.data.public_id
                 });
                 this.handleUploadFinish();
             })
@@ -155,10 +158,10 @@ class App extends Component {
         var file = event.target.files[0];
         var formData = this.state.formData;
         formData.selectedFile = file;
-        if(file != undefined) {
-            formData.selectedFileName = file.name;    
-        }
 
+        if(file != undefined) {
+            formData.selectedFileName = file.name;
+        }
 
         this.setState({formData: formData});
     }
