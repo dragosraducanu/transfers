@@ -48,46 +48,20 @@ class DownloadPage extends Component {
     getRandomGif = () => {
         axios.request({
             method: "get",
-            url:"https://api.giphy.com/v1/gifs/random?api_key=IiHi1ZPKkhDEIMRfFxyCwfzPr8JfugON&tag=&rating=G&tag=excited",
+            url:"https://api.giphy.com/v1/gifs/random?api_key=IiHi1ZPKkhDEIMRfFxyCwfzPr8JfugON&tag=&rating=G&tag=sad",
         }).then(data => {
-            let gifUrl = data.data.data.images.original.url;
+            var gifUrl = data.data.data.images.original.url;
             this.setState({gifUrl: gifUrl});
-        });
-    }
-
-    getTransfer = () => {
-        let publicId = window.location.href.substr(window.location.href.lastIndexOf('/') + 1);
-        axios.request({
-            method: "get",
-            url:"/api/transfer",
-            params: {
-                public_id: publicId
-            }
-        }).then(data => {
-            this.setState({
-                downloadLink: data.data.s3_path,
-                from: data.data.from,
-                message: data.data.message
-            })
-            console.log(data);
-        }).catch(error => {
-            console.log(error);
-            console.log(error.response);
-            this.props.history.push('/not-found')
         });
     }
 
     constructor() {
         super();
         this.state = {
-            from: "",
-            message: "",
-            downloadLink: "",
             gifUrl: ""
         };
 
         this.getRandomGif();
-        this.getTransfer();
     }
 
 
@@ -103,20 +77,7 @@ class DownloadPage extends Component {
                     <Paper className={this.props.classes.paper}>
                     <div>
                         <img width="200" src={this.state.gifUrl}></img><br/>
-                        You have a new file from <b>{this.state.from}</b>!<br/><br/>
-                        This is what <b>{this.state.from}</b> said: <br/>
-                        <i>{this.state.message}</i>
-                        <br/><br/>
-                        Click the button below to download your file!
-                        <br/><br/>
-                        <Link href={this.state.downloadLink}>
-                        <Button
-                            variant="contained"
-                            color="primary">
-                            Download
-                        </Button>
-                        </Link>
-
+                        Page not found :(
                         </div>
                     </Paper>
                 </Grid>

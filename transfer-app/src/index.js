@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 
 import App from './App';
 import DownloadPage from './DownloadPage';
+import NotFoundPage from './NotFoundPage';
 
 // import routes from './routes';
 import { BrowserRouter, Route, Switch } from 'react-router-dom';
@@ -15,7 +16,8 @@ ReactDOM.render(
         <BrowserRouter>
             <Switch>
                 <Route exact path="/" component={App} />
-                <Route exact path="/transfers/*" component={DownloadPage} />
+                <Route exact path="/transfer/*" component={DownloadPage} />
+                <Route path="*" component={NotFoundPage} />
             </Switch>
         </BrowserRouter>
     ),

@@ -1,99 +1,111 @@
 const express = require("express");
-const aws = require("aws-sdk");
-const multer = require("multer")
-const multerS3 = require("multer-s3")
 const bodyParser = require('body-parser');
 const low = require('lowdb')
 const FileSync = require('lowdb/adapters/FileSync')
 const hri = require('human-readable-ids').hri;
+const s3 = require('./s3');
+const crypto = require('crypto');
+const path = require('path');
+
 
 const adapter = new FileSync('db.json')
 const db = low(adapter)
 
 const app = express();
-
-const s3 = new aws.S3({
-  apiVersion: "2019-02-03",
-  credentials: {
-    accessKeyId:"AKIAIWNB7UTYKB5BSFZQ",
-    secretAccessKey: "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",
-    region: "eu-central-1"
-  }
-});
+app.use(bodyParser.json());
 
 db.defaults({
-    transfers: [],
-    last_id: 0,
+	transfers: [],
+	last_id: 0,
 }).write();
 
-app.use(bodyParser.json());
-const upload = multer({
-    storage: multerS3({
-        s3: s3,
-        acl: 'public-read',
-        bucket: 'dtransfers-dev',
-        key: function (req, file, cb) {
-            console.log(file);
-            cb(null, Date.now() + "_" + file.originalname);
-        }
-    })
-}).array('file', 1);
 
-app.get('/test', (req, res) => {
-    res.send(hri.random());
-});
-//open http://localhost:3000/ in browser to see upload form
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
-});
-
-app.get('/api/transfers', function (req, res) {
-    console.log(req.query.public_id);
-    var pId = req.query.public_id;
-
-    var dbTransfer = db.get('transfers')
-        .find({public_id: pId})
-        .value();
-
-    if(dbTransfer !== undefined) {
-        res.json(dbTransfer);
-    }
-});
-
-app.post('/api/upload', function (req, res) {
-    // console.log("got upload request");
-    upload(req, res, function (err, data) {
-        if (err) {
-            res.send("Something went wrong!");
-            console.log(err);
-        } else {
-          var link = req.files[0].location;
-          res.json(saveTransferToDb(link, req.body));
-        }
-    });
-});
-
-function saveTransferToDb(link, data) {
-    var lastId = db.get('last_id').value();
-    var transfer = {
-        id: lastId,
-        public_id: hri.random(),
-        s3_path: link,
-        from: data.from,
-        message: data.description,
-        upload_date: Date.now(),
-        expiry_date: Date.now() + 1 * 24 * 60 * 60 * 1000  // define some expiry times
-    };
-
-    db.get('transfers')
-        .push(transfer)
-        .write();
-
-    db.update('last_id', l => l + 1).write();
-
-    return transfer;
+//todo: move this to env vars;
+const s3Config = {
+	accessKey: 'AKIAIWNB7UTYKB5BSFZQ',
+	secretKey: '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',
+	bucket: 'dtransfers-dev',
+	region: 'eu-central-1',
+	maxSize: 1024 * 1024 * 1
 }
 
+function saveTransferToDb(data) {
+	let transfer = {
+		key: data.key,
+		public_id: hri.random(),
+		s3_path: null, //comes from S3;
+		from: data.from,
+		message: data.description,
+		upload_date: Date.now(),
+		expiry_date: Date.now() + 1 * 24 * 60 * 60 * 1000  // define some expiry times
+	};
+	
+	db.get('transfers')
+		.push(transfer)
+		.write();
+	
+	return transfer;
+}
+
+app.get('/api/transfer', function (req, res) {
+	console.log(req.query.public_id);
+	let pId = req.query.public_id;
+	
+	let dbTransfer = db.get('transfers')
+		.find({public_id: pId})
+		.value();
+	
+	if (dbTransfer) {
+		res.json(dbTransfer);
+	} else {
+		res.status(404).json({
+			code: 'TRANSFER_NOT_FOUND',
+			message: "The transfer couldn't be found"
+		});
+	}
+});
+
+app.patch('/api/transfer', function (req, res) {
+	let transferKey = req.query.key;
+	let s3Path = req.query.s3path;
+	
+	let dbTransfer = db.get('transfers')
+		.find({key: transferKey})
+		.assign({s3_path: s3Path})
+		.write();
+	
+	if(dbTransfer) {
+		res.status(200).json(dbTransfer);
+	} else {
+		res.status(400).json({
+			code: 'TRANSFER_NOT_FOUND',
+			message: "Couldn't find the specified transfer"
+		});
+	}
+});
+
+app.post('/api/transfer', function (req, res) {
+	console.log("GET: /api/upload2: " + JSON.stringify(req.query));
+	if (req.query.filename) {
+		let filename = crypto.randomBytes(16).toString('hex') + path.extname(req.query.filename);
+		res.json(s3.s3Credentials(s3Config, {
+			filename: filename,
+			contentType: req.query.content_type,
+		}));
+		
+		let data = req.body;
+		data.key = filename;
+		
+		saveTransferToDb(data);
+		
+	} else {
+		res.status(400).json({
+			code: 'FILENAME_REQUIRED',
+			message: 'filename is required'
+		});
+	}
+});
+
 app.listen(3001, () => {
-    console.log('Example app listening on port 3001!');
+	console.log('Server started on port 3001!');
 });
